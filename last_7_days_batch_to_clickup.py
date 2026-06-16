@@ -2,6 +2,7 @@ import json
 import re
 import argparse
 import os
+import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
@@ -232,7 +233,6 @@ def upload_reviews_to_clickup(
     group_name: str,
     reviews: List[Dict],
     status: str,
-    test_mode: bool = False,
 ) -> Dict[str, int]:
     headers = {"Authorization": token, "Content-Type": "application/json"}
     success = 0
@@ -240,16 +240,6 @@ def upload_reviews_to_clickup(
 
     for i, review in enumerate(reviews, 1):
         payload = build_task_payload(location, review, status, i)
-        if test_mode:
-            print(f"  [TEST] Would upload to list {list_id}:")
-            print(f"    Title:    {payload['name']}")
-            print(f"    Status:   {payload['status']}")
-            print(f"    Priority: {payload['priority']}")
-            print(f"    Body:\n{payload['description']}")
-            print("  ---")
-            success += 1
-            continue
-
         response = requests.post(
             f"https://api.clickup.com/api/v2/list/{list_id}/task",
             headers=headers,
@@ -285,28 +275,11 @@ def scrape_and_process_location(
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Batch scrape last-7-days reviews and upload to ClickUp.")
-    parser.add_argument("--makan-limit", type=int, default=None, help="Process only first N MAKAN locations.")
-    parser.add_argument(
-        "--competitor-limit",
-        type=int,
-        default=None,
-        help="Process only first N competitor locations.",
-    )
     parser.add_argument(
         "--parallel-scrapers",
         type=int,
         default=2,
         help="Number of parallel scraping windows (default: 2).",
-    )
-    parser.add_argument(
-        "--skip-competitors",
-        action="store_true",
-        help="Skip competitor locations for this run.",
-    )
-    parser.add_argument(
-        "--test",
-        action="store_true",
-        help="Scrape normally but skip ClickUp API uploads; print task payloads instead.",
     )
     parser.add_argument(
         "--headless",
@@ -324,10 +297,10 @@ def main() -> None:
     except FileNotFoundError as e:
         print(e)
         print("Fill the config file, then run the script again.")
-        return
+        sys.exit(1)
     except json.JSONDecodeError as e:
         print(f"Invalid JSON in config file: {e}")
-        return
+        sys.exit(1)
 
     clickup_config = config.get("clickup", {})
     token = str(clickup_config.get("api_token", "")).strip()
@@ -342,22 +315,13 @@ def main() -> None:
         os.environ["SCRAPER_HEADLESS"] = "1"
         print("Run option: headless browser mode is enabled.")
 
-    if args.test:
-        print("TEST MODE: scraping will run, but no tasks will be created in ClickUp.")
-    elif not token or token == "PASTE_CLICKUP_TOKEN_HERE":
-        print("Please set clickup.api_token in last_7_days_batch_config.json")
-        return
+    if not token or token == "PASTE_CLICKUP_TOKEN_HERE":
+        print("ClickUp API token is missing. Set CLICKUP_API_TOKEN or clickup.api_token in config.")
+        sys.exit(1)
 
     makan_group_list_id: Optional[str] = None
     competitor_group_list_id: Optional[str] = None
-    if args.test:
-        if makan_list_name:
-            makan_group_list_id = f"[TEST] {workspace_name}/{space_name}/{makan_list_name}"
-            print(f"TEST MODE: MAKAN uploads would target list '{makan_list_name}'.")
-        if competitor_list_name:
-            competitor_group_list_id = f"[TEST] {workspace_name}/{space_name}/{competitor_list_name}"
-            print(f"TEST MODE: competitor uploads would target list '{competitor_list_name}'.")
-    elif workspace_name and space_name:
+    if workspace_name and space_name:
         try:
             if makan_list_name:
                 makan_group_list_id = resolve_clickup_list_id_by_name(
@@ -384,25 +348,14 @@ def main() -> None:
         except Exception as e:
             print(f"Failed resolving ClickUp list IDs by names: {e}")
             print("You can set clickup.default_list_id or per-location clickup_list_id as fallback.")
+            sys.exit(1)
 
     makan_locations = parse_locations(config.get("makan_locations", []))
     competitor_locations = parse_locations(config.get("competitor_locations", []))
 
-    if args.makan_limit is not None and args.makan_limit >= 0:
-        makan_locations = makan_locations[: args.makan_limit]
-        print(f"Run option: processing first {len(makan_locations)} MAKAN locations only.")
-
-    if args.competitor_limit is not None and args.competitor_limit >= 0:
-        competitor_locations = competitor_locations[: args.competitor_limit]
-        print(f"Run option: processing first {len(competitor_locations)} competitor locations only.")
-
-    if args.skip_competitors:
-        competitor_locations = []
-        print("Run option: competitor locations are skipped.")
-
     if not makan_locations and not competitor_locations:
         print("No locations found. Add entries under makan_locations/competitor_locations.")
-        return
+        sys.exit(1)
 
     totals = {"scraped": 0, "uploaded": 0, "failed": 0}
     jobs: List[Tuple[LocationConfig, str, Optional[str]]] = []
@@ -442,9 +395,8 @@ def main() -> None:
             if not processed_reviews:
                 continue
 
-            action = "Previewing" if args.test else "Uploading"
             print(
-                f"{action} {len(processed_reviews)} reviews for '{location.name}' "
+                f"Uploading {len(processed_reviews)} reviews for '{location.name}' "
                 f"to ClickUp list {list_id}..."
             )
             upload_result = upload_reviews_to_clickup(
@@ -454,11 +406,9 @@ def main() -> None:
                 group_name=group_name,
                 reviews=processed_reviews,
                 status=clickup_status,
-                test_mode=args.test,
             )
-            done_label = "Preview done" if args.test else "Upload done"
             print(
-                f"{done_label} for '{location.name}': "
+                f"Upload done for '{location.name}': "
                 f"{upload_result['success']} success, {upload_result['failed']} failed."
             )
             totals["uploaded"] += upload_result["success"]
@@ -466,11 +416,11 @@ def main() -> None:
 
     print("\n===== Batch Finished =====")
     print(f"Total scraped:  {totals['scraped']}")
-    if args.test:
-        print(f"Total previewed (not uploaded): {totals['uploaded']}")
-    else:
-        print(f"Total uploaded: {totals['uploaded']}")
+    print(f"Total uploaded: {totals['uploaded']}")
     print(f"Total failed:   {totals['failed']}")
+
+    if totals["failed"] > 0:
+        sys.exit(1)
 
 
 if __name__ == "__main__":

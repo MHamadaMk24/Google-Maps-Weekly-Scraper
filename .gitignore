@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+.env
+*.log
+review_analyzer_gui_ClickUp.py
+batch_date_window_to_clickup.py
