@@ -1,12 +1,12 @@
 {
   "clickup": {
-    "api_token": "pk_93682727_SBAUA7ZJ1GJ5TC75IPFC9YDSCYYK7IBV",
+    "api_token": "",
     "default_list_id": "",
-    "workspace_name": "Makan",
-    "space_name": "Data Analysis Section",
-    "makan_list_name": "MAKAN's Locations Reviews",
-    "competitor_list_name": "MAKAN's Competitors Locations Reviews",
-    "status": "to do"
+    "workspace_name": "",
+    "space_name": "",
+    "makan_list_name": "",
+    "competitor_list_name": "",
+    "status": ""
   },
   "makan_locations": [
     {
