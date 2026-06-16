@@ -1,0 +1,142 @@
+{
+  "clickup": {
+    "api_token": "pk_93682727_SBAUA7ZJ1GJ5TC75IPFC9YDSCYYK7IBV",
+    "default_list_id": "",
+    "workspace_name": "Makan",
+    "space_name": "Data Analysis Section",
+    "makan_list_name": "MAKAN's Locations Reviews",
+    "competitor_list_name": "MAKAN's Competitors Locations Reviews",
+    "status": "to do"
+  },
+  "makan_locations": [
+    {
+      "name": "AL Noor",
+      "url": "https://www.google.com/maps/place/%D8%A7%D9%84%D9%86%D9%88%D8%B1+%D9%85%D9%88%D9%84%E2%80%AD/@24.4961545,39.5930306,17z/data=!4m8!3m7!1s0x15bdbeecafc81d35:0x34cbfdba1ea0415e!8m2!3d24.4961496!4d39.5956055!9m1!1b1!16s%2Fg%2F1vpgj2px?entry=ttu&g_ep=EgoyMDI2MDIyNS4wIKXMDSoASAFQAw%3D%3D",
+      "tag": "makan"
+    },
+    {
+      "name": "Al Hamra",
+      "url": "https://www.google.com/maps/place/Cenomi+Al+Hamra+Mall/@24.7732398,46.774629,17z/data=!4m8!3m7!1s0x3e2f01da7a27eacd:0x5bae318595e89eb2!8m2!3d24.773235!4d46.7772039!9m1!1b1!16s%2Fg%2F11b5wmfs07?entry=ttu&g_ep=EgoyMDI2MDIyNS4wIKXMDSoASAFQAw%3D%3D",
+      "tag": "makan"
+    },
+    {
+      "name": "Mall Of Arabia",
+      "url": "https://www.google.com/maps/place/Cenomi+Mall+of+Arabia/@21.6326504,39.1534455,17z/data=!4m8!3m7!1s0x15c3d75651ac5cdd:0xb1f19c0ca939eb3b!8m2!3d21.6326454!4d39.1560204!9m1!1b1!16s%2Fm%2F04mx64v?entry=ttu&g_ep=EgoyMDI2MDIyNS4wIKXMDSoASAFQAw%3D%3D",
+      "tag": "makan"
+    },
+    {
+      "name": "Westfield Dammam",
+      "url": "https://www.google.com/maps/place/Westfield+Dammam+%D9%88%D8%AC%D9%87%D8%AA%D9%83+%D8%A7%D9%84%D9%85%D9%81%D8%B6%D9%84%D8%A9%E2%80%AD/@26.3915958,50.0350221,17z/data=!4m8!3m7!1s0x3e49fdfb5de72b1d:0x5259f68a99907b6a!8m2!3d26.391591!4d50.037597!9m1!1b1!16s%2Fg%2F11gnq9kvjc?entry=ttu&g_ep=EgoyMDI2MDIyNS4wIKXMDSoASAFQAw%3D%3D",
+      "tag": "makan"
+    },
+    {
+      "name": "View Mall",
+      "url": "https://www.google.com/maps/place/Cenomi+The+View+Mall/@24.6959619,46.7260031,17z/data=!4m8!3m7!1s0x3e2f03b59abc1f21:0x474773d9c48ca9de!8m2!3d24.695957!4d46.728578!9m1!1b1!16s%2Fg%2F11pc9hdh5m?entry=ttu&g_ep=EgoyMDI2MDIyNS4wIKXMDSoASAFQAw%3D%3D",
+      "tag": "makan"
+    },
+    {
+      "name": "Bujairi Terrace Valet Parking",
+      "url": "https://www.google.com/maps/place/Bujairi+Terrace+Valet+Parking/@24.7373946,46.5722914,17z/data=!4m8!3m7!1s0x3e2ee138a79db8c3:0x8a9a5398d2564753!8m2!3d24.7373897!4d46.5748663!9m1!1b1!16s%2Fg%2F11sb86yzc6?entry=ttu&g_ep=EgoyMDI2MDIyNS4wIKXMDSoASAFQAw%3D%3D",
+      "tag": "makan"
+    },
+    {
+      "name": "Bujairi Terrace",
+      "url": "https://www.google.com/maps/place/Bujairi+Terrace/@24.7373282,46.572223,17z/data=!4m8!3m7!1s0x3e2ee182ff40797d:0xe8630b61641c7ca8!8m2!3d24.7373233!4d46.5747979!9m1!1b1!16s%2Fg%2F11s4y4pnnt?entry=ttu&g_ep=EgoyMDI2MDIyNS4wIKXMDSoASAFQAw%3D%3D",
+      "tag": "makan"
+    },
+    {
+      "name": "Zallal",
+      "url": "https://www.google.com/maps/place/Zallal/@24.738289,46.5723362,17z/data=!4m8!3m7!1s0x3e2ee1007c9ddc81:0x2d59a5a225c302bb!8m2!3d24.7382842!4d46.5772071!9m1!1b1!16s%2Fg%2F11w98__1bg?entry=ttu&g_ep=EgoyMDI2MDIyNS4wIKXMDSoASAFQAw%3D%3D",
+      "tag": "makan"
+    },
+    {
+      "name": "Ajdan",
+      "url": "https://www.google.com/maps/place/Ajdan+Walk/@26.2835739,50.216977,17z/data=!4m8!3m7!1s0x3e49e9a8dbd070d1:0xb1879f6bb0e8100a!8m2!3d26.2835691!4d50.2195519!9m1!1b1!16s%2Fg%2F11gh2qkx0q?entry=ttu&g_ep=EgoyMDI2MDIyNS4wIKXMDSoASAFQAw%3D%3D",
+      "tag": "makan"
+    },
+    {
+      "name": "Park Avenue",
+      "url": "https://www.google.com/maps/place/Park+Avenue+Mall/@24.8273172,46.7250544,17z/data=!4m8!3m7!1s0x3e2efc6d472d42af:0x24b3a53de9cbc5c3!8m2!3d24.8273124!4d46.7276293!9m1!1b1!16s%2Fg%2F11c1q5fj7s?entry=ttu&g_ep=EgoyMDI2MDIyNS4wIKXMDSoASAFQAw%3D%3D",
+      "tag": "makan"
+    },
+    {
+      "name": "Nakheel Riyadh",
+      "url": "https://www.google.com/maps/place/Cenomi+Al+Nakheel+Mall+%7C+%D8%B3%D9%8A%D9%86%D9%88%D9%85%D9%8A+%D8%A7%D9%84%D9%86%D8%AE%D9%8A%D9%84+%D9%85%D9%88%D9%84+%D9%88%D8%AC%D9%87%D8%AA%D9%83+%D8%A7%D9%84%D9%85%D9%81%D8%B6%D9%84%D8%A9%E2%80%AD/@24.7679478,46.7123611,17z/data=!4m8!3m7!1s0x3e2efd84c62786e3:0x52f7572a48d7434b!8m2!3d24.767943!4d46.714936!9m1!1b1!16s%2Fg%2F11fzfhrfmq?entry=ttu&g_ep=EgoyMDI2MDIyNS4wIKXMDSoASAFQAw%3D%3D",
+      "tag": "makan"
+    },
+    {
+      "name": "U-Walk Valet",
+      "url": "https://www.google.com/maps/place/Cenomi+U+Walk+%7C+%D8%B3%D9%8A%D9%86%D9%88%D9%85%D9%8A+%D8%A7%D9%84%D9%8A%D9%88+%D9%88%D9%88%D9%83%E2%80%AD/@24.7363385,46.6290214,17z/data=!4m8!3m7!1s0x3e2ee2636d956a79:0xaad900362e3a0796!8m2!3d24.7363336!4d46.6315963!9m1!1b1!16s%2Fg%2F11swyqgw9c?entry=ttu&g_ep=EgoyMDI2MDIyNS4wIKXMDSoASAFQAw%3D%3D",
+      "tag": "makan"
+    },
+    {
+      "name": "Makan Parking",
+      "url": "https://www.google.com/maps/place/Makan+Parking+Co./@24.630205,46.6895097,17z/data=!4m8!3m7!1s0x3e2f05004d88d1f5:0xb6234f196f9c3b3d!8m2!3d24.6302001!4d46.6920846!9m1!1b1!16s%2Fg%2F11w1fmrjr4?entry=ttu&g_ep=EgoyMDI2MDIyNS4wIKXMDSoASAFQAw%3D%3D",
+      "tag": "makan"
+    },
+    {
+      "name": "SALT",
+      "url": "https://www.google.com/maps/place/SALT/@26.3346838,50.2260285,17z/data=!3m1!4b1!4m6!3m5!1s0x3e49e98f3624ce11:0xdcfff8e77017f1d7!8m2!3d26.3346838!4d50.2260285!16s%2Fg%2F11h0mgqrwz!18m1!1e1?entry=ttu&g_ep=EgoyMDI2MDIyNS4wIKXMDSoASAFQAw%3D%3D",
+      "tag": "makan"
+    }
+  ],
+
+  
+  "competitor_locations": [
+    {
+      "name": "Dr. Soliman Fakeeh Hospital",
+      "url": "https://www.google.com/maps/place/Dr.+Soliman+Fakeeh+Hospital/@21.526007,39.1677722,17z/data=!3m1!4b1!4m6!3m5!1s0x15c3cfecfc803cad:0xba8ac50554feef9d!8m2!3d21.526007!4d39.1677722!16s%2Fg%2F12ckhq2b_!18m1!1e1?entry=ttu&g_ep=EgoyMDI2MDIyNS4wIKXMDSoASAFQAw%3D%3D",
+      "tag": "competitor"
+    },
+    {
+      "name": "Laysen Valley",
+      "url": "https://www.google.com/maps/place/Laysen+Valley/@24.6922282,46.6332502,17z/data=!3m1!4b1!4m6!3m5!1s0x3e2f1d00bf0a7f2f:0x8f3fa3832e3ec787!8m2!3d24.6922282!4d46.6332502!16s%2Fg%2F11cs2grqdc!18m1!1e1?entry=ttu&g_ep=EgoyMDI2MDIyNS4wIKXMDSoASAFQAw%3D%3D",
+      "tag": "competitor"
+    },
+    {
+      "name": "VIA Riyadh",
+      "url": "https://www.google.com/maps/place/VIA+Riyadh/@24.6670649,46.6263991,17z/data=!4m6!3m5!1s0x3e2f1d25b7c1b99f:0x69fd17659a4eaefb!8m2!3d24.6670649!4d46.6263991!16s%2Fg%2F11s7ny4b0p!18m1!1e1?entry=ttu&g_ep=EgoyMDI2MDIyNS4wIKXMDSoASAFQAw%3D%3D",
+      "tag": "competitor"
+    },
+    {
+      "name": "Bujairi Parking",
+      "url": "https://www.google.com/maps/place/Bujairi+Parking/@24.7392854,46.5772329,17z/data=!3m1!4b1!4m6!3m5!1s0x3e2ee1ded06c2c37:0x2f00c6e69490a88d!8m2!3d24.7392854!4d46.5772329!16s%2Fg%2F11sb86_fx8!18m1!1e1?entry=ttu&g_ep=EgoyMDI2MDIyNS4wIKXMDSoASAFQAw%3D%3D",
+      "tag": "competitor"
+    },
+    {
+      "name": "La Paz Plaza",
+      "url": "https://www.google.com/maps/place/La+Paz+Plaza/@21.603736,39.1436309,17z/data=!3m1!4b1!4m6!3m5!1s0x15c3db7f1f81312f:0x437e1b056e25a144!8m2!3d21.603736!4d39.1436309!16s%2Fg%2F11v5nk125c!18m1!1e1?entry=ttu&g_ep=EgoyMDI2MDIyNS4wIKXMDSoASAFQAw%3D%3D",
+      "tag": "competitor"
+    },
+    {
+      "name": "Dr. Soliman Fakeeh Medical Center Basateen",
+      "url": "https://www.google.com/maps/place/Dr.+Soliman+Fakeeh+Medical+Center+Basateen/@21.6693391,39.1217955,17z/data=!3m1!4b1!4m6!3m5!1s0x15c3d9ae14cd2063:0x107a9bb7a28dbda9!8m2!3d21.6693391!4d39.1217955!16s%2Fg%2F11dzt747g2!18m1!1e1?entry=ttu&g_ep=EgoyMDI2MDIyNS4wIKXMDSoASAFQAw%3D%3D",
+      "tag": "competitor"
+    },
+    {
+      "name": "Trio Boulevard",
+      "url": "https://www.google.com/maps/place/Trio+Boulevard/@21.5965018,39.121531,17z/data=!3m1!4b1!4m6!3m5!1s0x15c3db80502ac3fb:0x813aa6502d8fce95!8m2!3d21.5965018!4d39.121531!16s%2Fg%2F11rq624zgc!18m1!1e1?entry=ttu&g_ep=EgoyMDI2MDIyNS4wIKXMDSoASAFQAw%3D%3D",
+      "tag": "competitor"
+    },
+    {
+      "name": "King's College Hospital London - Jeddah",
+      "url": "https://www.google.com/maps/place/King's+College+Hospital+London+-+Jeddah/@21.580703,39.125877,17z/data=!3m1!4b1!4m6!3m5!1s0x15c3db6340f4d491:0xdf077fe86538eb3b!8m2!3d21.580703!4d39.125877!16s%2Fg%2F11k3vqmxc_!18m1!1e1?entry=ttu&g_ep=EgoyMDI2MDIyNS4wIKXMDSoASAFQAw%3D%3D",
+      "tag": "competitor"
+    },
+    {
+      "name": "King Fahad Armed Forces Hospital",
+      "url": "https://www.google.com/maps/place/King+Fahad+Armed+Forces+Hospital/@21.5418967,39.1292054,17z/data=!3m1!4b1!4m6!3m5!1s0x15c3c5398de52fa1:0xac5a75d93f674c3f!8m2!3d21.5418967!4d39.1292054!16s%2Fg%2F11xcgl99w!18m1!1e1?entry=ttu&g_ep=EgoyMDI2MDIyNS4wIKXMDSoASAFQAw%3D%3D",
+      "tag": "competitor"
+    },
+    {
+      "name": "Panda Hyper 251 | بنده هايبر",
+      "url": "https://www.google.com/maps/place/Panda+Hyper+251+%7C+%D8%A8%D9%86%D8%AF%D9%87+%D9%87%D8%A7%D9%8A%D8%A8%D8%B1%E2%80%AD/@21.6046122,39.1227633,17z/data=!3m1!4b1!4m6!3m5!1s0x15c3da5017aa59b9:0x4f3d0cebe7781b74!8m2!3d21.6046122!4d39.1227633!16s%2Fg%2F11b5zs1d5v!18m1!1e1?entry=ttu&g_ep=EgoyMDI2MDIyNS4wIKXMDSoASAFQAw%3D%3D",
+      "tag": "competitor"
+    },
+    {
+      "name": "Waseel Center",
+      "url": "https://www.google.com/maps/place/Waseel+Center/@24.7681794,46.7570581,17z/data=!3m1!4b1!4m6!3m5!1s0x3e2f01e4cb448039:0x8ef23e6faad6935!8m2!3d24.7681794!4d46.7570581!16s%2Fg%2F11cs47y9mt!18m1!1e1?entry=ttu&g_ep=EgoyMDI2MDIyNS4wIKXMDSoASAFQAw%3D%3D",
+      "tag": "competitor"
+    }
+  ]
+}
