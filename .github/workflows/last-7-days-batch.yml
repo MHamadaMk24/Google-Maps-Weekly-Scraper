@@ -1,9 +1,12 @@
-name: Google Maps Weekly Scraper
+name: Google Maps Weekly Scraper (legacy raw upload)
+
+# Kept for manual/raw-upload fallback.
+# Prefer: Weekly Scrape Classify Upload (weekly-pipeline.yml)
 
 on:
   workflow_dispatch:
   repository_dispatch:
-    types: [run-weekly-scraper]
+    types: [run-weekly-scraper-raw]
 
 jobs:
   run-batch:
@@ -34,5 +37,5 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run weekly scraper
-        run: python last_7_days_batch_to_clickup.py --headless
+      - name: Run weekly scraper (raw ClickUp upload)
+        run: python scraper/last_7_days_batch_to_clickup.py --headless

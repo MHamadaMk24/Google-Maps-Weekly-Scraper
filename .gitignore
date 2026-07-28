@@ -6,5 +6,8 @@ __pycache__/
 venv/
 .env
 *.log
-review_analyzer_gui_ClickUp.py
-batch_date_window_to_clickup.py
+data/weekly/
+data/models/
+run_weekly_pipeline_simulation.py
+scraper/review_analyzer_gui_ClickUp.py
+scraper/batch_date_window_to_clickup.py

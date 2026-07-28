@@ -1,3 +1,4 @@
+import csv
 import json
 import re
 import argparse
@@ -16,7 +17,19 @@ from google_maps_scraper import (
 )
 
 
-CONFIG_FILE = Path("last_7_days_batch_config.json")
+CONFIG_FILE = Path(__file__).resolve().parent.parent / "config" / "last_7_days_batch_config.json"
+DEFAULT_OUTPUT_DIR = Path(__file__).resolve().parent.parent / "data" / "weekly"
+SCRAPE_CSV_COLUMNS = [
+    "name",
+    "date",
+    "Review_Date",
+    "rating",
+    "text",
+    "id",
+    "link",
+    "location_name",
+    "mall_name",
+]
 
 
 @dataclass
@@ -198,6 +211,7 @@ def build_task_payload(
 ) -> Dict:
     reviewer = str(review.get("name", "N/A"))
     review_date = str(review.get("date", "N/A"))
+    absolute_review_date = str(review.get("Review_Date", "N/A"))
     rating = str(review.get("rating", "N/A"))
     review_text = str(review.get("text", "N/A"))
     review_link = review.get("link") or review.get("review_link") or review.get("url")
@@ -211,6 +225,7 @@ def build_task_payload(
         "",
         f"Name: {reviewer}",
         f"Date: {review_date}",
+        f"Review_Date: {absolute_review_date}",
         f"Rating: {rating}",
         f"Review: {review_text}",
     ]
@@ -269,22 +284,48 @@ def scrape_and_process_location(
         return []
 
     processed_reviews = process_reviews_function(raw_reviews)
+    for review in processed_reviews:
+        review["location_name"] = location.name
+        review["mall_name"] = location.name
     print(f"Scraped and processed {len(processed_reviews)} reviews for {location.name}.")
     return processed_reviews
 
 
+def write_reviews_csv(path: Path, reviews: List[Dict]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8-sig", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=SCRAPE_CSV_COLUMNS, extrasaction="ignore")
+        writer.writeheader()
+        for review in reviews:
+            row = {col: review.get(col, "") for col in SCRAPE_CSV_COLUMNS}
+            writer.writerow(row)
+    print(f"Saved {len(reviews)} reviews to {path}")
+
+
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Batch scrape last-7-days reviews and upload to ClickUp.")
+    parser = argparse.ArgumentParser(
+        description="Batch scrape last-7-days reviews (optionally save CSV / upload raw to ClickUp)."
+    )
     parser.add_argument(
         "--parallel-scrapers",
         type=int,
-        default=2,
-        help="Number of parallel scraping windows (default: 2).",
+        default=3,
+        help="Number of parallel scraping windows (default: 3).",
     )
     parser.add_argument(
         "--headless",
         action="store_true",
         help="Run scraper Chrome instances in headless mode (recommended for CI/GitHub Actions).",
+    )
+    parser.add_argument(
+        "--scrape-only",
+        action="store_true",
+        help="Scrape and save CSVs only (do not upload raw reviews to ClickUp).",
+    )
+    parser.add_argument(
+        "--output-dir",
+        default=str(DEFAULT_OUTPUT_DIR),
+        help="Directory for weekly scrape CSV outputs (default: data/weekly).",
     )
     return parser.parse_args()
 
@@ -310,18 +351,22 @@ def main() -> None:
     space_name = str(clickup_config.get("space_name", "")).strip()
     makan_list_name = str(clickup_config.get("makan_list_name", "")).strip()
     competitor_list_name = str(clickup_config.get("competitor_list_name", "")).strip()
+    output_dir = Path(args.output_dir)
+    scrape_only = bool(args.scrape_only)
 
     if args.headless:
         os.environ["SCRAPER_HEADLESS"] = "1"
         print("Run option: headless browser mode is enabled.")
 
-    if not token or token == "PASTE_CLICKUP_TOKEN_HERE":
+    if scrape_only:
+        print("Run option: scrape-only mode (CSV output, no raw ClickUp upload).")
+    elif not token or token == "PASTE_CLICKUP_TOKEN_HERE":
         print("ClickUp API token is missing. Set CLICKUP_API_TOKEN or clickup.api_token in config.")
         sys.exit(1)
 
     makan_group_list_id: Optional[str] = None
     competitor_group_list_id: Optional[str] = None
-    if workspace_name and space_name:
+    if not scrape_only and workspace_name and space_name:
         try:
             if makan_list_name:
                 makan_group_list_id = resolve_clickup_list_id_by_name(
@@ -372,6 +417,9 @@ def main() -> None:
     max_workers = max(1, int(args.parallel_scrapers))
     print(f"Running with {max_workers} parallel scraping window(s).")
 
+    makan_reviews: List[Dict] = []
+    competitor_reviews: List[Dict] = []
+
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         future_map = {
             executor.submit(scrape_and_process_location, location, group_name): (location, group_name, list_id)
@@ -381,10 +429,6 @@ def main() -> None:
         for future in as_completed(future_map):
             location, group_name, list_id = future_map[future]
 
-            if not list_id:
-                print(f"- Skipping upload for '{location.name}' ({group_name}): no ClickUp list id set")
-                continue
-
             try:
                 processed_reviews = future.result()
             except Exception as e:
@@ -393,6 +437,18 @@ def main() -> None:
 
             totals["scraped"] += len(processed_reviews)
             if not processed_reviews:
+                continue
+
+            if group_name == "MAKAN":
+                makan_reviews.extend(processed_reviews)
+            else:
+                competitor_reviews.extend(processed_reviews)
+
+            if scrape_only:
+                continue
+
+            if not list_id:
+                print(f"- Skipping upload for '{location.name}' ({group_name}): no ClickUp list id set")
                 continue
 
             print(
@@ -414,10 +470,20 @@ def main() -> None:
             totals["uploaded"] += upload_result["success"]
             totals["failed"] += upload_result["failed"]
 
+    makan_csv = output_dir / "makan_last_week_reviews.csv"
+    competitor_csv = output_dir / "competitors_last_week_reviews.csv"
+    write_reviews_csv(makan_csv, makan_reviews)
+    write_reviews_csv(competitor_csv, competitor_reviews)
+
     print("\n===== Batch Finished =====")
     print(f"Total scraped:  {totals['scraped']}")
-    print(f"Total uploaded: {totals['uploaded']}")
-    print(f"Total failed:   {totals['failed']}")
+    print(f"MAKAN CSV:      {makan_csv} ({len(makan_reviews)} rows)")
+    print(f"Competitors CSV:{competitor_csv} ({len(competitor_reviews)} rows)")
+    if scrape_only:
+        print("Mode: scrape-only (no raw ClickUp upload)")
+    else:
+        print(f"Total uploaded: {totals['uploaded']}")
+        print(f"Total failed:   {totals['failed']}")
 
     if totals["failed"] > 0:
         sys.exit(1)

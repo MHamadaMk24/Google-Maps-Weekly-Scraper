@@ -64,9 +64,10 @@ def review_has_meaningful_text(text):
     return True
 
 
-def parse_google_maps_review_date(date_str):
+def parse_google_maps_review_date(date_str, reference=None):
     """
     Parse Google Maps relative or absolute review date strings to a datetime.
+    Relative strings ("5 days ago") are resolved against `reference` (default: now).
     Returns None if unparseable. Aligns with GUI parse_date logic.
     """
     if not date_str or date_str == "N/A":
@@ -75,10 +76,9 @@ def parse_google_maps_review_date(date_str):
     try:
         original_date_str = date_str
         date_str = date_str.strip().lower()
+        now = reference or datetime.now()
 
         if "ago" in date_str:
-            now = datetime.now()
-
             if "minute" in date_str:
                 minutes = re.findall(r"(\d+)\s*minute", date_str)
                 if minutes:
@@ -130,6 +130,28 @@ def parse_google_maps_review_date(date_str):
     except Exception as e:
         print(f"DEBUG: Error parsing date '{date_str}': {e}")
         return None
+
+
+def compute_review_date(date_str, scraped_at=None):
+    """
+    Convert a Google Maps relative date (e.g. "5 days ago") into an absolute
+    calendar date using the scrape day as the reference.
+
+    Example: scraped 25-Jun, review says "5 days ago" -> Review_Date "20-Jun-2025"
+    """
+    reference = scraped_at or datetime.now()
+    parsed = parse_google_maps_review_date(date_str, reference=reference)
+    if parsed is None:
+        return "N/A"
+    return parsed.strftime("%d-%b-%Y")
+
+
+def attach_review_dates(reviews, scraped_at=None):
+    """Add Review_Date to each review from its relative/absolute date string."""
+    reference = scraped_at or datetime.now()
+    for review in reviews or []:
+        review["Review_Date"] = compute_review_date(review.get("date"), scraped_at=reference)
+    return reviews
 
 
 class ReviewTextProcessor:
@@ -928,6 +950,7 @@ class GoogleMapsReviewScraper:
             review_data = {
                 'name': 'N/A',
                 'date': 'N/A',
+                'Review_Date': 'N/A',
                 'rating': 'N/A',
                 'text': 'N/A',
                 'id': 'N/A',  # Unique ID for each review
@@ -953,6 +976,7 @@ class GoogleMapsReviewScraper:
                 try:
                     date_element = container.find_element(By.CSS_SELECTOR, "div.DU9Pgb span.rsqaWe")
                     review_data['date'] = date_element.text.strip()
+                    review_data['Review_Date'] = compute_review_date(review_data['date'])
                 except:
                     pass
 
@@ -1355,12 +1379,14 @@ class GoogleMapsReviewScraper:
             return
 
         with open(filename, 'w', newline='', encoding='utf-8-sig') as csvfile:
-            # Include the per-review share link in the CSV output
-            fieldnames = ['name', 'date', 'rating', 'text', 'link']
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            # Include absolute Review_Date (scrape day minus relative offset) and share link
+            fieldnames = ['name', 'date', 'Review_Date', 'rating', 'text', 'link']
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames, extrasaction='ignore')
 
             writer.writeheader()
             for review in reviews:
+                if 'Review_Date' not in review:
+                    review['Review_Date'] = compute_review_date(review.get('date'))
                 writer.writerow(review)
 
         print(f"Reviews saved to {filename}")
@@ -1583,9 +1609,12 @@ def scrape_reviews_function_recent_with_text(url, days_back: int):
 
 def process_reviews_function(reviews):
     """Standalone function to process reviews"""
+    scraped_at = datetime.now()
+    attach_review_dates(reviews, scraped_at=scraped_at)
     processor = ReviewTextProcessor()
     try:
         processed_reviews = processor.preprocess_reviews(reviews)
+        attach_review_dates(processed_reviews, scraped_at=scraped_at)
         return processed_reviews
     except Exception as e:
         print(f"Error in processing: {e}")
@@ -1611,6 +1640,8 @@ __all__ = [
     "process_reviews_function",
     "save_reviews_function",
     "parse_google_maps_review_date",
+    "compute_review_date",
+    "attach_review_dates",
     "review_has_meaningful_text",
 ]
 

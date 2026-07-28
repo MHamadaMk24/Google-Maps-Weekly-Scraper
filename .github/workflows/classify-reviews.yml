@@ -1,0 +1,79 @@
+name: Classify Parking Reviews
+
+on:
+  workflow_dispatch:
+    inputs:
+      input_csv:
+        description: Path to the weekly reviews CSV inside the repository
+        required: true
+        default: data/input/reviews.csv
+      output_csv:
+        description: Optional output CSV path (defaults to input stem + _parking_classified.csv)
+        required: false
+        default: ""
+      batch_size:
+        description: Inference batch size (default 32; drop to 16 if the runner runs out of RAM)
+        required: false
+        default: "32"
+
+jobs:
+  classify-reviews:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements-classifier.txt
+
+      - name: Install PyTorch (CPU)
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements-classifier.txt
+
+      - name: Restore cached models
+        id: models-cache
+        uses: actions/cache@v4
+        with:
+          path: data/models
+          key: review-models-v1-${{ hashFiles('classifier/download_models.py', 'classifier/model_paths.py') }}
+
+      - name: Download models
+        if: steps.models-cache.outputs.cache-hit != 'true'
+        run: python classifier/download_models.py
+
+      - name: Validate input CSV
+        run: |
+          test -f "${{ github.event.inputs.input_csv }}" || {
+            echo "Input CSV not found: ${{ github.event.inputs.input_csv }}"
+            echo "Commit the weekly reviews file to the repo or change the workflow input path."
+            exit 1
+          }
+
+      - name: Classify reviews
+        id: classify
+        run: |
+          INPUT="${{ github.event.inputs.input_csv }}"
+          OUTPUT="${{ github.event.inputs.output_csv }}"
+          if [ -z "$OUTPUT" ]; then
+            STEM="${INPUT%.csv}"
+            OUTPUT="${STEM}_parking_classified.csv"
+          fi
+          python classifier/zero_shot_review_classifier.py \
+            --input "$INPUT" \
+            --output "$OUTPUT" \
+            --batch-size "${{ github.event.inputs.batch_size }}"
+          echo "output_file=$OUTPUT" >> "$GITHUB_OUTPUT"
+
+      - name: Upload classified CSV
+        uses: actions/upload-artifact@v4
+        with:
+          name: parking-classified-reviews
+          path: ${{ steps.classify.outputs.output_file }}

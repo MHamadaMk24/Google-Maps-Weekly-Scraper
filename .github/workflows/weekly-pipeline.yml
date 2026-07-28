@@ -1,0 +1,109 @@
+name: Weekly Scrape Classify Upload
+
+on:
+  schedule:
+    # Every Sunday at 06:00 UTC (09:00 Asia/Riyadh)
+    - cron: "0 6 * * 0"
+  workflow_dispatch:
+  repository_dispatch:
+    types: [run-weekly-scraper]
+
+jobs:
+  weekly-pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 480
+    env:
+      CLICKUP_API_TOKEN: ${{ secrets.CLICKUP_API_TOKEN }}
+      CLICKUP_WORKSPACE_NAME: ${{ secrets.CLICKUP_WORKSPACE_NAME }}
+      CLICKUP_SPACE_NAME: ${{ secrets.CLICKUP_SPACE_NAME }}
+      CLICKUP_MAKAN_LIST_NAME: ${{ secrets.CLICKUP_MAKAN_LIST_NAME }}
+      CLICKUP_COMPETITOR_LIST_NAME: ${{ secrets.CLICKUP_COMPETITOR_LIST_NAME }}
+      CLICKUP_STATUS: ${{ secrets.CLICKUP_STATUS }}
+      WEEKLY_DIR: data/weekly
+      MAKAN_RAW: data/weekly/makan_last_week_reviews.csv
+      COMPETITORS_RAW: data/weekly/competitors_last_week_reviews.csv
+      COMBINED_RAW: data/weekly/all_last_week_reviews.csv
+      COMBINED_CLASSIFIED: data/weekly/all_last_week_reviews_classified.csv
+      MAKAN_CLASSIFIED: data/weekly/makan_last_week_reviews_classified.csv
+      COMPETITORS_CLASSIFIED: data/weekly/competitors_last_week_reviews_classified.csv
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-classifier.txt
+
+      - name: Setup Chrome
+        uses: browser-actions/setup-chrome@v1
+
+      - name: Install scraper dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Scrape last-week reviews (CSV only)
+        run: |
+          mkdir -p "$WEEKLY_DIR"
+          python scraper/last_7_days_batch_to_clickup.py \
+            --headless \
+            --scrape-only \
+            --output-dir "$WEEKLY_DIR"
+
+      - name: Merge MAKAN + competitors for one classify pass
+        run: |
+          python scraper/merge_split_weekly_reviews.py merge \
+            --makan "$MAKAN_RAW" \
+            --competitors "$COMPETITORS_RAW" \
+            --output "$COMBINED_RAW"
+
+      - name: Install classifier dependencies
+        run: |
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements-classifier.txt
+
+      - name: Restore cached models
+        id: models-cache
+        uses: actions/cache@v4
+        with:
+          path: data/models
+          key: review-models-v1-${{ hashFiles('classifier/download_models.py', 'classifier/model_paths.py') }}
+
+      - name: Download models
+        if: steps.models-cache.outputs.cache-hit != 'true'
+        run: python classifier/download_models.py
+
+      - name: Classify all reviews (single pass)
+        run: |
+          python classifier/zero_shot_review_classifier.py \
+            --input "$COMBINED_RAW" \
+            --output "$COMBINED_CLASSIFIED" \
+            --batch-size 32
+
+      - name: Split classified reviews by category
+        run: |
+          python scraper/merge_split_weekly_reviews.py split \
+            --input "$COMBINED_CLASSIFIED" \
+            --makan-output "$MAKAN_CLASSIFIED" \
+            --competitors-output "$COMPETITORS_CLASSIFIED"
+
+      - name: Upload classified reviews to ClickUp
+        run: |
+          python scraper/clickup_classified_upload.py --input "$MAKAN_CLASSIFIED"
+          python scraper/clickup_classified_upload.py --input "$COMPETITORS_CLASSIFIED"
+
+      - name: Upload weekly artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: weekly-reviews-${{ github.run_id }}
+          path: |
+            data/weekly/*.csv
+          if-no-files-found: warn
+          retention-days: 30
