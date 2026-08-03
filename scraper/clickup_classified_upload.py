@@ -6,7 +6,7 @@ import json
 import os
 import re
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 
@@ -51,7 +51,7 @@ FIELD_NAME_CANDIDATES = {
 
 EXPECTED_FIELD_TYPES = {
     "id": {"short_text"},
-    "Review_Date": {"date"},
+    "Review_Date": {"date", "short_text"},
     "name": {"short_text"},
     "rating": {"short_text"},
     "text": {"text", "short_text"},
@@ -59,7 +59,7 @@ EXPECTED_FIELD_TYPES = {
     "location_name": {"short_text"},
     "Parking Related": {"short_text", "drop_down"},
     "Sentiment": {"short_text", "drop_down"},
-    "Sentiment Score": {"number"},
+    "Sentiment Score": {"number", "short_text"},
     "Topic": {"short_text", "drop_down"},
     "Sub_Topic": {"short_text", "drop_down"},
     "Escalated To": {"short_text", "drop_down"},
@@ -248,44 +248,107 @@ def fetch_list_field_mapping(token: str, list_id: str) -> Dict[str, Dict]:
             raise RuntimeError(f"ClickUp list {list_id} missing field for '{csv_col}'")
 
         preferred = [m for m in matches if str(m.get("type", "")).strip() in EXPECTED_FIELD_TYPES[csv_col]]
-        chosen = preferred[0] if preferred else matches[0]
+        # Prefer strongest type when multiple matches exist
+        type_priority = {
+            "Review_Date": ["date", "short_text"],
+            "Sentiment Score": ["number", "short_text"],
+            "text": ["text", "short_text"],
+            "link": ["url", "short_text"],
+        }
+        chosen = None
+        for preferred_type in type_priority.get(csv_col, []):
+            typed = [m for m in preferred if str(m.get("type", "")).strip() == preferred_type]
+            if typed:
+                chosen = typed[0]
+                break
+        if chosen is None:
+            chosen = preferred[0] if preferred else matches[0]
         mapping[csv_col] = chosen
     return mapping
 
 
 def format_clickup_date(value: str) -> Optional[int]:
+    """Convert Review_Date / relative date text to ClickUp date ms timestamp."""
     text = str(value or "").strip()
-    if not text:
+    if not text or text.lower() in {"nan", "none", "n/a", "na", "-"}:
         return None
-    try:
-        parsed = datetime.strptime(text, "%d-%b-%Y")
-        return int(parsed.timestamp() * 1000)
-    except ValueError:
+
+    # Preferred export format
+    for fmt in ("%d-%b-%Y", "%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y", "%d-%m-%Y", "%b %d, %Y", "%B %d, %Y"):
+        try:
+            parsed = datetime.strptime(text, fmt)
+            return int(parsed.timestamp() * 1000)
+        except ValueError:
+            continue
+
+    # Relative Google Maps phrases (should already be converted, but harden upload)
+    lower = text.lower()
+    now = datetime.now()
+    if "ago" in lower:
+        day_match = re.findall(r"(\d+)\s*day", lower)
+        if day_match and "week" not in lower:
+            return int((now - timedelta(days=int(day_match[0]))).timestamp() * 1000)
+        week_match = re.findall(r"(\d+)\s*week", lower)
+        if week_match:
+            return int((now - timedelta(weeks=int(week_match[0]))).timestamp() * 1000)
+        hour_match = re.findall(r"(\d+)\s*hour", lower)
+        if hour_match:
+            return int((now - timedelta(hours=int(hour_match[0]))).timestamp() * 1000)
+        if "a day ago" in lower:
+            return int((now - timedelta(days=1)).timestamp() * 1000)
+        if "a week ago" in lower:
+            return int((now - timedelta(weeks=1)).timestamp() * 1000)
+    if lower == "today":
+        return int(now.timestamp() * 1000)
+    if lower == "yesterday":
+        return int((now - timedelta(days=1)).timestamp() * 1000)
+    return None
+
+
+def absolute_review_date_string(value: str) -> Optional[str]:
+    """Normalize any date text to dd-Mon-YYYY for short_text ClickUp fields."""
+    ms = format_clickup_date(value)
+    if ms is None:
         return None
+    return datetime.fromtimestamp(ms / 1000).strftime("%d-%b-%Y")
 
 
 def convert_field_value(csv_col: str, value: str, field_type: str):
-    text = str(value or "").strip()
-    if not text:
+    text = str(value if value is not None else "").strip()
+    if text.lower() in {"", "nan", "none", "n/a", "na", "-"}:
         return None
 
     if csv_col == "Review_Date":
-        return format_clickup_date(text)
+        if field_type == "date":
+            return format_clickup_date(text)
+        # short_text (or unexpected type): always send absolute calendar date, never "X days ago"
+        return absolute_review_date_string(text)
 
-    if field_type == "number":
+    if csv_col == "Sentiment Score" or field_type == "number":
         try:
-            if "." in text:
-                return float(text)
-            return int(text)
+            cleaned = text.replace(",", "").strip()
+            number = float(cleaned)
+            if number.is_integer():
+                number = int(number)
+            # ClickUp number fields need numeric; short_text needs string
+            if csv_col == "Sentiment Score" and field_type != "number":
+                return str(number)
+            return number
         except ValueError:
             return None
+
+    if csv_col == "link":
+        if not text.startswith("http"):
+            return None
+        return text
 
     return text
 
 
 def build_task_name(row: Dict[str, str], row_index: int) -> str:
     location = str(row.get("location_name", "")).strip() or "Location"
-    review_date = str(row.get("Review_Date", "")).strip() or "ReviewDate"
+    raw_date = str(row.get("Review_Date", "")).strip()
+    review_date = absolute_review_date_string(raw_date) or raw_date or "ReviewDate"
     reviewer = str(row.get("name", "")).strip() or f"Review {row_index}"
     return f"{location} - {review_date} - {reviewer}"[:255]
 
@@ -312,14 +375,22 @@ def build_task_payload(
     field_mapping: Dict[str, Dict],
 ) -> Dict:
     custom_fields: List[Dict] = []
+    skipped_fields: List[str] = []
     for csv_col in FINAL_COLUMNS:
         field = field_mapping[csv_col]
         field_id = str(field.get("id", "")).strip()
         field_type = str(field.get("type", "")).strip()
         value = convert_field_value(csv_col, row.get(csv_col, ""), field_type)
         if not field_id or value is None:
+            skipped_fields.append(csv_col)
             continue
         custom_fields.append({"id": field_id, "value": value})
+
+    if skipped_fields:
+        print(
+            f"WARNING: row {row_index} skipped fields ({len(skipped_fields)}): "
+            f"{', '.join(skipped_fields)}"
+        )
 
     return {
         "name": build_task_name(row, row_index),

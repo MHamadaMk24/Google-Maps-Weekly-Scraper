@@ -686,26 +686,48 @@ class GoogleMapsReviewScraper:
 
         return None
 
-    def get_review_share_link(self, container):
+    def get_review_share_link(self, container, attempts=3):
         """
         Open the 3-dots menu for a review, click 'Share review',
         and read the per-review share link from the dialog.
         Supports both known Google share-dialog variants.
+        Retries a few times — empty links are not acceptable when possible.
         """
+        for attempt in range(1, attempts + 1):
+            link = self._get_review_share_link_once(container)
+            if link:
+                return link
+            print(f"DEBUG: Share-link attempt {attempt}/{attempts} failed; retrying...")
+            time.sleep(0.35 * attempt)
+        return None
+
+    def _get_review_share_link_once(self, container):
+        """Single attempt to extract a review share link."""
         try:
             # Locate the 3-dots menu icon inside this review container
-            menu_icon = container.find_element(By.CSS_SELECTOR, "span.eaLgGf.google-symbols")
-        except NoSuchElementException:
-            return None
+            menu_icon = None
+            menu_selectors = [
+                "span.eaLgGf.google-symbols",
+                "button[aria-label*='More' i]",
+                "button[data-value='More']",
+                "span.google-symbols.eaLgGf",
+            ]
+            for sel in menu_selectors:
+                try:
+                    menu_icon = container.find_element(By.CSS_SELECTOR, sel)
+                    if menu_icon:
+                        break
+                except NoSuchElementException:
+                    continue
+            if not menu_icon:
+                return None
 
-        try:
             # Bring into view and click
             self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", menu_icon)
-            time.sleep(0.2)
+            time.sleep(0.25)
             try:
                 self.driver.execute_script("arguments[0].click();", menu_icon)
             except Exception:
-                # Fallback to ActionChains if JS click fails
                 ActionChains(self.driver).move_to_element(menu_icon).click().perform()
 
             # Wait for and click the 'Share review' menu item (supports multiple menu markups)
@@ -715,10 +737,11 @@ class GoogleMapsReviewScraper:
                 "//div[@role='menuitem' and contains(., 'Share review')]",
                 "//div[@role='menuitemradio' and contains(., 'Share')]",
                 "//div[@role='menuitem' and contains(., 'Share')]",
+                "//div[contains(@class,'fxNQSd') and contains(., 'Share')]",
             ]
             for xp in share_option_xpaths:
                 try:
-                    share_option = WebDriverWait(self.driver, 1.2).until(
+                    share_option = WebDriverWait(self.driver, 1.5).until(
                         EC.element_to_be_clickable((By.XPATH, xp))
                     )
                     break
@@ -726,17 +749,21 @@ class GoogleMapsReviewScraper:
                     continue
 
             if not share_option:
+                try:
+                    ActionChains(self.driver).send_keys(Keys.ESCAPE).perform()
+                except Exception:
+                    pass
                 return None
 
             self.driver.execute_script("arguments[0].click();", share_option)
 
             # Fast extraction: handle both dialog variants while the dialog animates in.
             link_value = None
-            for _ in range(10):
+            for _ in range(14):
                 link_value = self._extract_link_from_share_dialog()
                 if self._is_valid_review_link(link_value):
                     break
-                time.sleep(0.15)
+                time.sleep(0.18)
 
             # Fallback path: click "Copy Link" and read clipboard.
             if not self._is_valid_review_link(link_value):
@@ -746,23 +773,28 @@ class GoogleMapsReviewScraper:
 
             # Final short retry after copy click in case the dialog field gets populated.
             if not self._is_valid_review_link(link_value):
-                for _ in range(4):
+                for _ in range(6):
                     link_value = self._extract_link_from_share_dialog()
                     if self._is_valid_review_link(link_value):
                         break
-                    time.sleep(0.1)
+                    time.sleep(0.12)
 
             # Best-effort close of the dialog so the next iterations are clean
             try:
                 ActionChains(self.driver).send_keys(Keys.ESCAPE).perform()
             except Exception:
                 pass
+            time.sleep(0.15)
 
             clean_link = self._extract_first_maps_url(link_value)
             return clean_link if clean_link else None
 
         except Exception as e:
             print(f"DEBUG: Failed to get share link for a review: {e}")
+            try:
+                ActionChains(self.driver).send_keys(Keys.ESCAPE).perform()
+            except Exception:
+                pass
             return None
 
     def setup_driver(self):
@@ -776,6 +808,13 @@ class GoogleMapsReviewScraper:
         chrome_options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
         chrome_options.add_argument("--lang=en-US")
         chrome_options.add_argument("--accept-lang=en-US,en")
+        # Help clipboard APIs in headless CI when Copy Link fallback is needed
+        chrome_options.add_experimental_option(
+            "prefs",
+            {
+                "profile.default_content_setting_values.clipboard": 1,
+            },
+        )
         if os.getenv("SCRAPER_HEADLESS", "").strip().lower() in {"1", "true", "yes"}:
             # Required for CI runners (no display server).
             chrome_options.add_argument("--headless=new")
@@ -998,12 +1037,27 @@ class GoogleMapsReviewScraper:
 
                 # Try to fetch the per-review share link via the 3-dots menu → Share review → Copy link dialog
                 try:
-                    link_value = self.get_review_share_link(container)
+                    link_value = self.get_review_share_link(container, attempts=3)
                     if link_value:
                         review_data['link'] = link_value
                         print(f"DEBUG: Retrieved share link for review {review_data.get('id')}: {link_value}")
+                    else:
+                        review_data['link'] = ""
+                        print(
+                            f"WARNING: Missing share link for review "
+                            f"id={review_data.get('id')} name={review_data.get('name')}"
+                        )
                 except Exception as e:
+                    review_data['link'] = ""
                     print(f"DEBUG: Error while retrieving share link for review {review_data.get('id')}: {e}")
+
+                # Never leave relative scraped date as Review_Date
+                if not review_data.get('Review_Date') or str(review_data.get('Review_Date')).strip() in {"N/A", ""}:
+                    review_data['Review_Date'] = compute_review_date(review_data.get('date'))
+                elif "ago" in str(review_data.get('Review_Date', "")).lower():
+                    review_data['Review_Date'] = compute_review_date(review_data.get('Review_Date'))
+                    if review_data['Review_Date'] in {"N/A", ""}:
+                        review_data['Review_Date'] = compute_review_date(review_data.get('date'))
 
                 reviews_on_page.append(review_data)
             except Exception as e:
