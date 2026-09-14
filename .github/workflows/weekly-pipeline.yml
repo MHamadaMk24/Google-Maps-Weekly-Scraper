@@ -19,6 +19,12 @@ jobs:
       CLICKUP_MAKAN_LIST_NAME: ${{ secrets.CLICKUP_MAKAN_LIST_NAME }}
       CLICKUP_COMPETITOR_LIST_NAME: ${{ secrets.CLICKUP_COMPETITOR_LIST_NAME }}
       CLICKUP_STATUS: ${{ secrets.CLICKUP_STATUS }}
+      TENANT_ID: ${{ secrets.TENANT_ID }}
+      CLIENT_ID: ${{ secrets.CLIENT_ID }}
+      CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+      SHAREPOINT_SITE_URL: ${{ secrets.SHAREPOINT_SITE_URL }}
+      SHAREPOINT_DOC_LIB: ${{ secrets.SHAREPOINT_DOC_LIB }}
+      TARGET_FOLDER_PATH: ${{ secrets.TARGET_FOLDER_PATH }}
       WEEKLY_DIR: data/weekly
       MAKAN_RAW: data/weekly/makan_last_week_reviews.csv
       COMPETITORS_RAW: data/weekly/competitors_last_week_reviews.csv
@@ -98,6 +104,12 @@ jobs:
           python scraper/clickup_classified_upload.py --input "$MAKAN_CLASSIFIED"
           python scraper/clickup_classified_upload.py --input "$COMPETITORS_CLASSIFIED"
 
+      - name: Convert to Excel and upload to SharePoint Reviews
+        run: |
+          python scraper/sharepoint_classified_upload.py \
+            --input "$MAKAN_CLASSIFIED" \
+            --input "$COMPETITORS_CLASSIFIED"
+
       - name: Upload weekly artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -105,5 +117,6 @@ jobs:
           name: weekly-reviews-${{ github.run_id }}
           path: |
             data/weekly/*.csv
+            data/weekly/*.xlsx
           if-no-files-found: warn
           retention-days: 30

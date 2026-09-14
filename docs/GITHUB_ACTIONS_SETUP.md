@@ -1,4 +1,4 @@
-# Weekly Scrape → Classify → ClickUp Upload
+# Weekly Scrape → Classify → ClickUp → SharePoint
 
 Production workflow for Sunday runs:
 1. Scrape last-7-days Google Maps reviews (CSV only)
@@ -6,6 +6,7 @@ Production workflow for Sunday runs:
 3. Classify parking-related reviews in **one** pass (models load 3× total)
 4. Split by category and drop the identifier
 5. Upload classified rows into ClickUp custom fields
+6. Convert the same two classified CSVs to Excel and upload to SharePoint `Documents/Reviews`
 
 ## Workflow
 
@@ -22,6 +23,12 @@ Name: **Weekly Scrape Classify Upload**
 | `CLICKUP_MAKAN_LIST_NAME` | List for MAKAN locations |
 | `CLICKUP_COMPETITOR_LIST_NAME` | List for competitor locations |
 | `CLICKUP_STATUS` | Task status (e.g. `to do`) |
+| `TENANT_ID` | Azure AD tenant ID |
+| `CLIENT_ID` | Azure AD app (client) ID |
+| `CLIENT_SECRET` | Azure AD app client secret |
+| `SHAREPOINT_SITE_URL` | e.g. `https://makanpak.sharepoint.com/sites/SKIDATAFILES` |
+| `SHAREPOINT_DOC_LIB` | Document library name (e.g. `Documents`) |
+| `TARGET_FOLDER_PATH` | Folder under the library (e.g. `Reviews`) |
 
 Secrets override empty values in `config/last_7_days_batch_config.json` at runtime.
 
@@ -69,6 +76,8 @@ Saved under `data/weekly/` and uploaded as a workflow artifact:
 | `all_last_week_reviews_classified.csv` | Single classify pass output (still has `pipeline_category`) |
 | `makan_last_week_reviews_classified.csv` | Final classified MAKAN parking rows (no category column) |
 | `competitors_last_week_reviews_classified.csv` | Final classified competitor parking rows (no category column) |
+| `makan_last_week_reviews_classified.xlsx` | Excel copy uploaded to SharePoint |
+| `competitors_last_week_reviews_classified.xlsx` | Excel copy uploaded to SharePoint |
 
 `pipeline_category` is merge/split only and is **not** uploaded to ClickUp.
 
@@ -79,6 +88,12 @@ Saved under `data/weekly/` and uploaded as a workflow artifact:
 - MAKAN rows → MAKAN list
 - Competitor rows → Competitors list
 - Always uploads (no duplicate skip)
+
+## SharePoint behavior
+
+- Same two classified sheets as ClickUp
+- Converted to `.xlsx` then uploaded to `Documents/Reviews`
+- Overwrites same filenames on each weekly run
 
 ## Local development
 
@@ -91,7 +106,10 @@ python scraper/merge_split_weekly_reviews.py merge --makan data/weekly/makan_las
 python classifier/zero_shot_review_classifier.py --input data/weekly/all_last_week_reviews.csv --output data/weekly/all_last_week_reviews_classified.csv
 python scraper/merge_split_weekly_reviews.py split --input data/weekly/all_last_week_reviews_classified.csv --makan-output data/weekly/makan_last_week_reviews_classified.csv --competitors-output data/weekly/competitors_last_week_reviews_classified.csv
 
-# 3) Upload classified sheets
+# 3) Upload classified sheets to ClickUp
 python scraper/clickup_classified_upload.py --input data/weekly/makan_last_week_reviews_classified.csv
 python scraper/clickup_classified_upload.py --input data/weekly/competitors_last_week_reviews_classified.csv
+
+# 4) Convert to Excel and upload to SharePoint Reviews
+python scraper/sharepoint_classified_upload.py --input data/weekly/makan_last_week_reviews_classified.csv --input data/weekly/competitors_last_week_reviews_classified.csv
 ```
