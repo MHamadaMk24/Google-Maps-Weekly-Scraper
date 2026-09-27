@@ -40,7 +40,7 @@ There is no built-in `schedule` trigger; the weekly run comes only from the exte
 
 `Actions` → `Weekly Scrape Classify Upload` → `Run workflow`
 
-### 2) External cron webhook (weekly, Sunday 09:00 Asia/Riyadh)
+### 2) External cron webhook (weekly, Sunday)
 
 - **URL:** `https://api.github.com/repos/<owner>/<repo>/dispatches`
 - **Method:** `POST`
