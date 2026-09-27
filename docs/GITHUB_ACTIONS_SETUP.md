@@ -34,21 +34,13 @@ Secrets override empty values in `config/last_7_days_batch_config.json` at runti
 
 ## Triggers
 
-### 1) Cron (Sunday)
+There is no built-in `schedule` trigger; the weekly run comes only from the external cron webhook, so the pipeline runs once per week.
 
-Runs every Sunday at **06:00 UTC** (= **09:00 Asia/Riyadh**):
-
-```yaml
-cron: "0 6 * * 0"
-```
-
-Change the hour in `.github/workflows/weekly-pipeline.yml` if needed.
-
-### 2) Manual run (GitHub UI)
+### 1) Manual run (GitHub UI)
 
 `Actions` → `Weekly Scrape Classify Upload` → `Run workflow`
 
-### 3) External cron webhook (optional)
+### 2) External cron webhook (weekly, Sunday 09:00 Asia/Riyadh)
 
 - **URL:** `https://api.github.com/repos/<owner>/<repo>/dispatches`
 - **Method:** `POST`
